@@ -2,7 +2,9 @@ import { Room } from './Room';
 import { GameStatus, Player, Round } from './types';
 import { Server } from 'socket.io';
 
-const WORDS = ['apple', 'banana', 'car', 'dog', 'elephant', 'flower', 'guitar', 'house', 'ice cream', 'jellyfish'];
+const wordPictionaryList = require('word-pictionary-list');
+// @ts-ignore
+const WORDS: string[] = (wordPictionaryList.wordList || []).map((w: string) => w.toLowerCase());
 
 export class Game {
     public status: GameStatus = GameStatus.LOBBY;
@@ -44,6 +46,15 @@ export class Game {
 
     private nextTurn() {
         this.turnIndex++;
+
+        if (this.room.players.size < 2) {
+            console.log("[Game] Not enough players to continue. Resetting to LOBBY.");
+            this.status = GameStatus.LOBBY;
+            this.currentRound = 0;
+            this.io.to(this.room.id).emit('game-over', { reason: "Not enough players" }); // Or just reset state
+            return;
+        }
+
         const players = Array.from(this.room.players.values());
 
         if (this.turnIndex >= players.length) {
@@ -70,7 +81,9 @@ export class Game {
         console.log(`[Game] Turn starting. Drawer: ${this.currentDrawer.username} (${this.currentDrawer.id})`);
         this.io.to(this.room.id).emit('turn-start', {
             drawerId: this.currentDrawer.id,
-            roundEnd: 0
+            roundEnd: 0,
+            currentRound: this.currentRound,
+            totalRounds: this.totalRounds
         });
 
         // Send words only to drawer with slight delay to ensure client state transition
@@ -163,18 +176,6 @@ export class Game {
             }
         }
 
-        // Don't send hint to drawer (they know the word), but for simplicity broadcast to room is fine
-        // Client can ignore if drawer, but good to keep state sync
-        this.io.to(this.room.id).emit('chat-message', {
-            id: 'system-hint', // or unique ID
-            playerId: 'system',
-            username: 'System',
-            text: `Hint: ${hint.split('').join(' ')}`,
-            timestamp: Date.now(),
-            isSystem: true,
-            type: 'chat' // or specific hint type if needed
-        });
-
         // Also emit specific event for UI update (top bar)
         this.io.to(this.room.id).emit('word-hint', hint);
     }
@@ -242,6 +243,28 @@ export class Game {
         // Logic to show winners
         const sortedPlayers = Array.from(this.room.players.values()).sort((a, b) => b.score - a.score);
         this.io.to(this.room.id).emit('game-over', { winner: sortedPlayers });
+    }
+
+    public playAgainVotes: Set<string> = new Set();
+
+    public restartGame() {
+        if (this.status !== GameStatus.GAME_OVER) return;
+
+        console.log(`[Game] Restarting game for Room ${this.room.id}`);
+        // Reset scores
+        this.room.players.forEach(p => p.score = 0);
+        this.currentRound = 0;
+        this.turnIndex = -1;
+        this.playAgainVotes.clear();
+        this.io.to(this.room.id).emit('update-restart-votes', 0);
+
+        this.startGame();
+    }
+
+    public votePlayAgain(playerId: string) {
+        if (this.status !== GameStatus.GAME_OVER) return;
+        this.playAgainVotes.add(playerId);
+        this.io.to(this.room.id).emit('update-restart-votes', this.playAgainVotes.size);
     }
 
     // Getters for public state
