@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Users, Play, Crown } from 'lucide-react';
 
 export default function LobbyPage({ params }: { params: { roomId: string } }) {
-    const { players, roomId, socket, currentUser, setPlayers, setGameStatus } = useGameStore();
+    const { players, roomId, socket, currentUser, setPlayers, setGameStatus, syncGameState } = useGameStore();
     const router = useRouter();
 
     // Protection: Redirect if no socket/room (e.g. refresh)
@@ -32,14 +32,22 @@ export default function LobbyPage({ params }: { params: { roomId: string } }) {
             router.push(`/game/${roomId}`);
         };
 
+        const onGameStateSync = (state: any) => {
+            console.log("Lobby received sync:", state);
+            syncGameState(state);
+            router.push(`/game/${roomId}`);
+        };
+
         socket.on('player-joined', onPlayerJoined);
         socket.on('player-left', onPlayerLeft);
         socket.on('game-started', onGameStarted);
+        socket.on('sync-game-state', onGameStateSync);
 
         return () => {
             socket.off('player-joined', onPlayerJoined);
             socket.off('player-left', onPlayerLeft);
             socket.off('game-started', onGameStarted);
+            socket.off('sync-game-state', onGameStateSync);
         };
     }, [socket, roomId, router, setPlayers, setGameStatus]);
 
@@ -68,13 +76,14 @@ export default function LobbyPage({ params }: { params: { roomId: string } }) {
                     <p className="text-slate-400">Invite friends to play!</p>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-6">
-                    <div className="flex items-center justify-between mb-6 bg-slate-800/50 p-4 rounded-xl border border-dashed border-slate-700">
-                        <div>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-8 mb-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between mb-6 bg-slate-800/50 p-4 rounded-xl border border-dashed border-slate-700 gap-4">
+                        <div className="text-center sm:text-left">
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Room Code</span>
-                            <span className="text-3xl font-mono font-bold tracking-widest text-purple-400">{roomId}</span>
+                            <span className="text-3xl font-mono font-bold tracking-widest text-purple-400 break-all">{roomId}</span>
                         </div>
-                        <button onClick={copyRoomId} className="p-3 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white cursor-pointer">
+                        <button onClick={copyRoomId} className="p-3 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white cursor-pointer w-full sm:w-auto flex items-center justify-center gap-2">
+                            <span className="sm:hidden font-bold text-sm">Copy Code</span>
                             <Copy className="w-5 h-5" />
                         </button>
                     </div>
