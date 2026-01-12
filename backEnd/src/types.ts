@@ -12,6 +12,8 @@ export interface Player {
     score: number;
     isHost: boolean;
     socketId: string;
+    isInVoice?: boolean;
+    isMuted?: boolean;
 }
 
 export interface Point {
@@ -53,12 +55,15 @@ export interface ClientEvents {
     'play-again': () => void;
     'signal': (data: { targetId: string, signal: any }) => void;
     'join-voice': () => void;
+    'request-restart': () => void;
+    'vote-play-again': () => void;
+    'voice-mute-change': (isMuted: boolean) => void;
     'request-words': () => void;
 }
 
 // Server -> Client Events
 export interface ServerEvents {
-    'room-joined': (data: { roomId: string, players: Player[] }) => void;
+    'room-joined': (data: { roomId: string, players: Player[], gameState?: any }) => void;
     'player-joined': (player: Player) => void;
     'player-left': (playerId: string) => void;
     'game-started': () => void;
@@ -73,9 +78,12 @@ export interface ServerEvents {
     'update-scores': (players: Player[]) => void;
     'turn-end': (data: { word: string, scores: Player[] }) => void;
     'game-over': (data: { winner: Player[] }) => void;
+    'sync-game-state': (gameState: any) => void;
     'error': (message: string) => void;
     'signal': (data: { senderId: string, signal: any }) => void;
     'word-hint': (hint: string) => void;
     'user-joined-voice': (userId: string) => void;
     'timer-update': (time: number) => void;
+    'update-restart-votes': (votes: number) => void;
+    'voice-state-update': (data: { userId: string, isMuted: boolean, isInVoice?: boolean }) => void;
 }
