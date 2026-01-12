@@ -54,13 +54,20 @@ io.on('connection', (socket) => {
             id: socket.id,
             username,
             score: 0,
-            isHost: false,
+            isHost: false, // Rejoining logic might need to be smarter about restoring host, but for now simple
             socketId: socket.id
         };
         room.addPlayer(player);
         socket.join(roomId);
 
-        socket.emit('room-joined', { roomId, players: Array.from(room.players.values()) });
+        const activeGame = roomManager.isGameActive(roomId);
+        const gameState = activeGame ? roomManager.getGameState(roomId) : null;
+
+        socket.emit('room-joined', {
+            roomId,
+            players: Array.from(room.players.values()),
+            gameState
+        });
         io.to(roomId).emit('player-joined', player);
     });
 
@@ -72,6 +79,59 @@ io.on('connection', (socket) => {
             return;
         }
         room.game.startGame();
+    });
+
+    socket.on('request-restart', () => {
+        console.log(`[Socket ${socket.id}] request-restart`);
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (!room) {
+            console.error(`[Socket ${socket.id}] Room not found for restart request`);
+            return;
+        }
+        if (room.hostId !== socket.id) {
+            console.error(`[Socket ${socket.id}] Not host, cannot restart`);
+            socket.emit('error', 'Only host can restart game');
+            return;
+        }
+        room.game.restartGame();
+    });
+
+    socket.on('vote-play-again', () => {
+        console.log(`[Socket ${socket.id}] vote-play-again`);
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (room) {
+            room.game.votePlayAgain(socket.id);
+        } else {
+            console.error(`[Socket ${socket.id}] Room not found for vote`);
+        }
+    });
+
+    socket.on('voice-mute-change', (isMuted) => {
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (room) {
+            const player = room.getPlayer(socket.id);
+            if (player) {
+                player.isMuted = isMuted;
+                io.to(room.id).emit('voice-state-update', { userId: socket.id, isMuted, isInVoice: true });
+            }
+        }
+    });
+
+    // ...
+
+    // WebRTC Signaling
+    socket.on('join-voice', () => {
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (room) {
+            const player = room.getPlayer(socket.id);
+            if (player) {
+                player.isInVoice = true;
+                player.isMuted = false; // Default unmuted on join
+                // Broadcast both signaling and state update
+                socket.to(room.id).emit('user-joined-voice', socket.id);
+                io.to(room.id).emit('voice-state-update', { userId: socket.id, isMuted: false, isInVoice: true });
+            }
+        }
     });
 
     socket.on('draw', (data) => {
@@ -164,12 +224,7 @@ io.on('connection', (socket) => {
     });
 
     // WebRTC Signaling
-    socket.on('join-voice', () => {
-        const room = roomManager.getRoomByPlayer(socket.id);
-        if (room) {
-            socket.to(room.id).emit('user-joined-voice', socket.id);
-        }
-    });
+
 
     socket.on('signal', (data: { targetId: string, signal: any }) => {
         io.to(data.targetId).emit('signal', {
