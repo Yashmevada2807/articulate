@@ -20,7 +20,8 @@
     "socket.io-client": "^4.8.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "word-pictionary-list": "^1.0.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

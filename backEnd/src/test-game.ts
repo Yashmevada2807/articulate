@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const URL = 'http://localhost:3000';
+const URL = 'http://localhost:3001';
 
 const client1 = io(URL);
 const client2 = io(URL);
