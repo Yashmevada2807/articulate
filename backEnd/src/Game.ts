@@ -26,38 +26,85 @@ export class Game {
         this.io = io;
     }
 
-    public startGame() {
+    private turnOrder: string[] = [];
+
+    public startGame(): void {
+        console.log(`Starting game in room ${this.room.id}`);
+
         if (this.room.players.size < 2) {
-            // Need at least 2 players
-            return;
+            // Need at least 2 players (though could be 1 player + 1 spec, but usually need 2 PLAYERS)
+            // Let's rely on turnOrder length check later
         }
+
+        if (this.room.teamMode.enabled) {
+            // Random Shuffle on Start if random mode
+            if (this.room.teamMode.selectionMode === 'random') {
+                this.room.randomizeTeams();
+            }
+
+            // Safety Check: Start Game Safety Check
+            const balanceCheck = this.room.areTeamsBalanced();
+            if (!balanceCheck.valid) {
+                throw new Error(balanceCheck.reason);
+            }
+            // Lock teams
+            this.room.teamMode.teamsLocked = true;
+            this.room.broadcastTeamMode();
+        }
+
+        // Generate Turn Order (Excluding spectators, handling team interleaving)
+        this.generateTurnOrder();
+
+        if (this.turnOrder.length < 2) {
+            throw new Error("Not enough active players (non-spectators) to start.");
+        }
+
         this.status = GameStatus.CHOOSING_WORD;
         this.currentRound = 1;
         this.turnIndex = -1;
         this.playersWhoGuessed.clear();
 
-        // Broadcast Start
+        // Reset scores
         this.room.players.forEach(p => p.score = 0);
+
+        // Broadcast Start
         this.io.to(this.room.id).emit('game-started');
         this.io.to(this.room.id).emit('update-scores', Array.from(this.room.players.values()));
         // We'll iterate turns
         this.nextTurn();
     }
 
+    private generateTurnOrder() {
+        const players = Array.from(this.room.players.values());
+        const activePlayers = players.filter(p => !p.role || p.role === 'player'); // Default to player if undefined
+
+        if (this.room.teamMode.enabled) {
+            // Interleave Teams
+            const teamA = activePlayers.filter(p => p.team === 'A');
+            const teamB = activePlayers.filter(p => p.team === 'B');
+
+            this.turnOrder = [];
+            let i = 0;
+            const maxLen = Math.max(teamA.length, teamB.length);
+
+            for (let k = 0; k < maxLen; k++) {
+                if (k < teamA.length) this.turnOrder.push(teamA[k].id);
+                if (k < teamB.length) this.turnOrder.push(teamB[k].id);
+            }
+        } else {
+            // Standard Mode - just use list (maybe shuffle?)
+            // Let's shuffle for fairness in standard mode
+            this.turnOrder = activePlayers.map(p => p.id).sort(() => 0.5 - Math.random());
+        }
+
+        console.log(`[Game] Turn Order generated: ${this.turnOrder}`);
+    }
+
     private nextTurn() {
         this.turnIndex++;
 
-        if (this.room.players.size < 2) {
-            console.log("[Game] Not enough players to continue. Resetting to LOBBY.");
-            this.status = GameStatus.LOBBY;
-            this.currentRound = 0;
-            this.io.to(this.room.id).emit('game-over', { reason: "Not enough players" }); // Or just reset state
-            return;
-        }
-
-        const players = Array.from(this.room.players.values());
-
-        if (this.turnIndex >= players.length) {
+        // Use turnOrder instead of raw players
+        if (this.turnIndex >= this.turnOrder.length) {
             // End of Round
             if (this.currentRound >= this.totalRounds) {
                 this.endGame();
@@ -66,10 +113,24 @@ export class Game {
             this.currentRound++;
             this.io.to(this.room.id).emit('new-round', this.currentRound);
             this.turnIndex = 0;
-            // Optionally send round update
+            // Re-shuffle order for next round? 
+            // In Team Mode, we probably want to keep rotation or just shift? 
+            // For simplicity, keep same order for now, or regeneration could happen.
+            // Let's keep distinct turn order per game for consistency.
         }
 
-        this.currentDrawer = players[this.turnIndex];
+        const drawerId = this.turnOrder[this.turnIndex];
+        const drawer = this.room.getPlayer(drawerId);
+
+        if (!drawer) {
+            console.error(`[Game] Drawer ${drawerId} not found (maybe left?). Skipping turn.`);
+            // Recursively call nextTurn to skip? Or handle gracefully.
+            // If player left, we might need to remove them from turnOrder or just skip.
+            this.nextTurn();
+            return;
+        }
+
+        this.currentDrawer = drawer;
         this.currentWord = null;
         this.playersWhoGuessed.clear();
         this.status = GameStatus.CHOOSING_WORD;
@@ -182,6 +243,11 @@ export class Game {
 
     public handleGuess(playerId: string, guess: string): boolean {
         if (this.status !== GameStatus.DRAWING) return false;
+
+        const player = this.room.getPlayer(playerId);
+        if (!player) return false;
+        if (player.role === 'spectator') return false; // Spectators cannot guess
+
         if (this.playersWhoGuessed.has(playerId)) return false; // Already guessed
         if (playerId === this.currentDrawer?.id) return false; // Drawer can't guess
 
@@ -189,7 +255,7 @@ export class Game {
             this.playersWhoGuessed.add(playerId);
             // Calculate Score based on time left
             const points = Math.ceil(this.timeLeft / 2) * 10;
-            const player = this.room.getPlayer(playerId);
+
             if (player) {
                 player.score += points;
                 this.io.to(this.room.id).emit('correct-guess', {

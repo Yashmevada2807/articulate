@@ -118,7 +118,7 @@ export default function Scoreboard({ players, isGameOver = false, onReturnToLobb
                         >
                             <button
                                 onClick={onReturnToLobby}
-                                className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold transition-colors border border-slate-700"
+                                className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold transition-colors border border-slate-700 cursor-pointer"
                             >
                                 Return to Lobby
                             </button>
@@ -126,7 +126,7 @@ export default function Scoreboard({ players, isGameOver = false, onReturnToLobb
                             {onPlayAgain ? (
                                 <button
                                     onClick={onPlayAgain}
-                                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:from-purple-500 hover:to-pink-500 text-white rounded-lg font-bold transition-all shadow-purple-900/20"
+                                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:from-purple-500 hover:to-pink-500 text-white rounded-lg font-bold transition-all shadow-purple-900/20 cursor-pointer"
                                 >
                                     Start Game ({voteCount})
                                 </button>
@@ -140,7 +140,7 @@ export default function Scoreboard({ players, isGameOver = false, onReturnToLobb
                                     }}
                                     disabled={hasVoted}
                                     className={clsx(
-                                        "px-8 py-3 rounded-lg font-bold transition-all border",
+                                        "px-8 py-3 rounded-lg font-bold transition-all border cursor-pointer",
                                         hasVoted
                                             ? "bg-slate-800/50 text-slate-500 border-slate-800 cursor-not-allowed"
                                             : "bg-purple-600/20 text-purple-400 border-purple-500/50 hover:bg-purple-600/30"

@@ -14,6 +14,14 @@ export interface Player {
     socketId: string;
     isInVoice?: boolean;
     isMuted?: boolean;
+    team?: 'A' | 'B' | null;
+    role?: 'player' | 'spectator';
+}
+
+export interface TeamModeConfig {
+    enabled: boolean;
+    selectionMode: 'manual' | 'random';
+    teamsLocked: boolean;
 }
 
 export interface Point {
@@ -59,6 +67,9 @@ export interface ClientEvents {
     'vote-play-again': () => void;
     'voice-mute-change': (isMuted: boolean) => void;
     'request-words': () => void;
+    'update-team-mode': (config: Partial<TeamModeConfig>) => void;
+    'join-team': (team: 'A' | 'B' | null, role: 'player' | 'spectator') => void;
+    'lock-teams': () => void;
 }
 
 // Server -> Client Events
@@ -86,4 +97,6 @@ export interface ServerEvents {
     'timer-update': (time: number) => void;
     'update-restart-votes': (votes: number) => void;
     'voice-state-update': (data: { userId: string, isMuted: boolean, isInVoice?: boolean }) => void;
+    'team-mode-updated': (config: TeamModeConfig) => void;
+    'team-update': (players: Player[]) => void; // Broadcasts full player list with updated teams
 }

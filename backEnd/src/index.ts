@@ -78,7 +78,11 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Only host can start game');
             return;
         }
-        room.game.startGame();
+        try {
+            room.game.startGame();
+        } catch (e: any) {
+            socket.emit('error', e.message || 'Failed to start game');
+        }
     });
 
     socket.on('request-restart', () => {
@@ -205,6 +209,60 @@ io.on('connection', (socket) => {
             if (words && words.length > 0) {
                 socket.emit('word-to-select', words);
             }
+        }
+    });
+
+    // --- Team Mode Handler ---
+
+    socket.on('update-team-mode', (config) => {
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (!room || room.hostId !== socket.id) return;
+
+        if (config.enabled && !room.teamMode.enabled) {
+            // Enabling
+            room.enableTeamMode(config.selectionMode);
+        } else if (config.enabled === false && room.teamMode.enabled) {
+            // Disabling
+            room.disableTeamMode();
+        } else if (room.teamMode.enabled) {
+            // Updating sub-config
+            if (config.selectionMode) {
+                room.setTeamSelectionMode(config.selectionMode);
+            }
+        }
+    });
+
+    socket.on('join-team', (team, role) => {
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (!room) return;
+
+        const result = room.joinTeam(socket.id, team, role);
+        if (!result.success) {
+            socket.emit('error', result.reason || 'Failed to join team');
+        }
+    });
+
+    socket.on('lock-teams', () => {
+        const room = roomManager.getRoomByPlayer(socket.id);
+        if (!room || room.hostId !== socket.id) return;
+
+        if (room.teamMode.enabled && room.teamMode.selectionMode === 'manual') {
+            // For random, randomizeTeams() locks it. For manual, explicit lock?
+            // Actually, 'randomizeTeams' isn't exposed via socket yet?
+            // If selectionMode is random, we should probably have a 'randomize' action or just do it on start.
+            // Prompt says: "When selectionMode = random and host starts game: Server must Shuffle..." 
+            // So explicit randomize might not be needed?
+            // But manual mode needs locking? Or start game locks it?
+            // "Before starting game ... Server must verify ... Teams locked"
+            // Prompt step 3: "Manual Team Selection Logic ... Teams cannot exceed size difference... "
+            // Prompt step 4: "Random ... Locked ... Broadcast assignments".
+            // Let's add 'randomize-teams' or just handle it at start?
+            // Wait, step 4 says "When selectionMode = random and host starts game: Server must Shuffle...". 
+            // So we don't need a separate event for random. 
+            // But for LOCK? "After locking: Team changes are rejected".
+            // Maybe manual locking is useful.
+            room.teamMode.teamsLocked = true;
+            room.broadcastTeamMode();
         }
     });
 

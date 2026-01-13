@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useGameStore, Player } from '../../../store/gameStore';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eraser, Pencil, Send, Trash2, Menu, X, Volume2, Mic, MicOff } from 'lucide-react';
+import { Eraser, Pencil, Send, Trash2, Menu, X, Volume2, Mic, MicOff, Clock, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import Scoreboard from '../../../components/Scoreboard';
 import CanvasBoard from '../../../components/CanvasBoard';
@@ -69,7 +69,7 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                 onClick={onClick}
                 className={clsx(
                     "w-8 h-8 rounded-full border-2 transition-all hover:scale-110 cursor-pointer",
-                    selected ? "border-white scale-110 shadow-lg ring-2 ring-slate-700" : "border-slate-600"
+                    selected ? "border-white scale-110 shadow-lg ring-2 ring-zinc-500" : "border-zinc-700"
                 )}
                 style={{ backgroundColor: color }}
             />
@@ -263,27 +263,49 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
     };
 
     return (
-        <div className="h-[100dvh] bg-slate-950 text-slate-50 flex flex-col overflow-hidden">
+        <div className="h-[100dvh] bg-black text-zinc-100 flex flex-col overflow-hidden font-sans selection:bg-purple-900/50">
+            {/* Ambient Background */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02]" />
+            </div>
+
             {/* Header: Timer & Round Info */}
-            <header className="h-14 md:h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 md:px-6 z-20 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-slate-400 hover:text-white">
+            <header className="h-16 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 flex items-center justify-between px-6 z-20 shrink-0 relative">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-zinc-400 hover:text-white cursor-pointer">
                         <Menu className="w-6 h-6" />
                     </button>
-                    <div className="font-bold text-sm md:text-xl">Round {currentRound || 1}/{totalRounds || 3}</div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Round</span>
+                        <span className="text-sm font-bold text-zinc-200">{currentRound || 1} / {totalRounds || 3}</span>
+                    </div>
                 </div>
 
-                <div className="absolute left-1/2 -translate-x-1/2 text-2xl md:text-3xl font-mono font-bold text-amber-400">
-                    {timeLeft}s
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-purple-500" />
+                    <span className={clsx(
+                        "text-3xl font-black font-mono tracking-wider",
+                        timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-zinc-100"
+                    )}>
+                        {timeLeft}
+                    </span>
                 </div>
 
-                <div className="text-sm md:text-base">
-                    <span className="md:inline hidden mr-2">Word:</span>
-                    <span className="font-mono tracking-widest text-slate-400 font-bold text-lg">{word || '_ _ _'}</span>
+                <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Current Word</span>
+                    <span className="text-sm font-mono font-bold text-zinc-200 tracking-wider">
+                        {word ||
+                            <span className="flex gap-1">
+                                <span className="w-2 h-0.5 bg-zinc-700 animate-pulse" />
+                                <span className="w-2 h-0.5 bg-zinc-700 animate-pulse delay-75" />
+                                <span className="w-2 h-0.5 bg-zinc-700 animate-pulse delay-150" />
+                            </span>
+                        }
+                    </span>
                 </div>
             </header>
 
-            <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+            <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-10">
 
                 {/* Visual Overlay for Mobile Menu Background */}
                 <AnimatePresence>
@@ -293,7 +315,7 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMenuOpen(false)}
-                            className="absolute inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/80 z-30 md:hidden backdrop-blur-sm"
                         />
                     )}
                 </AnimatePresence>
@@ -302,43 +324,119 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
 
                 <aside
                     className={clsx(
-                        "absolute md:static top-0 left-0 bottom-0 w-3/4 max-w-[300px] md:w-64 bg-slate-900 md:bg-slate-900/50 border-r border-slate-800 z-40 flex flex-col transition-transform duration-300",
+                        "absolute md:static top-0 left-0 bottom-0 w-3/4 max-w-[300px] md:w-72 bg-zinc-950/80 md:bg-zinc-950/30 backdrop-blur-md border-r border-zinc-900 z-40 flex flex-col transition-transform duration-300",
                         isMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
                     )}
                 >
-                    <div className="p-4 flex justify-between items-center md:hidden border-b border-slate-800">
-                        <h3 className="font-bold text-slate-100">Leaderboard</h3>
-                        <button onClick={() => setIsMenuOpen(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                    <div className="p-4 flex justify-between items-center md:hidden border-b border-zinc-900">
+                        <h3 className="font-bold text-zinc-100 uppercase text-xs tracking-widest">Players</h3>
+                        <button onClick={() => setIsMenuOpen(false)} className="cursor-pointer"><X className="w-5 h-5 text-zinc-500" /></button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 hidden md:block">Leaderboard</h3>
-                        {players.map((player, idx) => {
-                            const speakingState = voiceStates.get(player.id);
-                            return (
-                                <PlayerCard
-                                    key={player.id}
-                                    player={player}
-                                    rank={idx + 1}
-                                    isDrawer={player.id === currentDrawer}
-                                    isSpeaking={speakingState?.isSpeaking}
-                                    isMuted={player.isMuted}
-                                />
-                            );
-                        })}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                        {!useGameStore.getState().teamMode.enabled ? (
+                            /* Classic Free-for-all */
+                            <div>
+                                <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3 hidden md:block">Leaderboard</h3>
+                                <div className="space-y-2">
+                                    {players.map((player, idx) => {
+                                        const speakingState = voiceStates.get(player.id);
+                                        return (
+                                            <PlayerCard
+                                                key={player.id}
+                                                player={player}
+                                                rank={idx + 1}
+                                                isDrawer={player.id === currentDrawer}
+                                                isSpeaking={speakingState?.isSpeaking}
+                                                isMuted={player.isMuted}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            /* Team Mode Layout */
+                            <>
+                                {/* Team A */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2 px-1">
+                                        <h3 className="text-[10px] font-bold text-cyan-500/80 uppercase tracking-widest">TEAM A</h3>
+                                        <div className="text-[10px] font-bold text-cyan-400 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-500/20">
+                                            {players.filter(p => p.team === 'A').reduce((sum, p) => sum + (p.score || 0), 0)} pts
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {players.filter(p => p.team === 'A').map((player, idx) => (
+                                            <PlayerCard
+                                                key={player.id}
+                                                player={player}
+                                                rank={idx + 1}
+                                                isDrawer={player.id === currentDrawer}
+                                                isSpeaking={voiceStates.get(player.id)?.isSpeaking}
+                                                isMuted={player.isMuted}
+                                                team="A"
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Team B */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2 px-1">
+                                        <h3 className="text-[10px] font-bold text-rose-500/80 uppercase tracking-widest">TEAM B</h3>
+                                        <div className="text-[10px] font-bold text-rose-400 bg-rose-950/30 px-2 py-0.5 rounded border border-rose-500/20">
+                                            {players.filter(p => p.team === 'B').reduce((sum, p) => sum + (p.score || 0), 0)} pts
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {players.filter(p => p.team === 'B').map((player, idx) => (
+                                            <PlayerCard
+                                                key={player.id}
+                                                player={player}
+                                                rank={idx + 1}
+                                                isDrawer={player.id === currentDrawer}
+                                                isSpeaking={voiceStates.get(player.id)?.isSpeaking}
+                                                isMuted={player.isMuted}
+                                                team="B"
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Spectators */}
+                                {players.filter(p => p.role === 'spectator').length > 0 && (
+                                    <div>
+                                        <h3 className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest mb-2 px-1">Spectators</h3>
+                                        <div className="space-y-2">
+                                            {players.filter(p => p.role === 'spectator').map((player, idx) => (
+                                                <PlayerCard
+                                                    key={player.id}
+                                                    player={player}
+                                                    rank={idx + 1}
+                                                    isDrawer={false}
+                                                    isSpeaking={voiceStates.get(player.id)?.isSpeaking}
+                                                    isMuted={player.isMuted}
+                                                    isSpectator={true}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
 
                     {/* Voice Manager Embedded in Sidebar */}
-                    <div className="p-4 bg-slate-900/50 border-t border-slate-800">
+                    <div className="p-4 bg-zinc-900/50 border-t border-zinc-900 mt-auto">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                <Volume2 className={clsx("w-4 h-4", activeVoiceCount > 0 && "text-emerald-400 animate-pulse")} />
-                                Voice Chat
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                                <Volume2 className={clsx("w-3 h-3", activeVoiceCount > 0 && "text-emerald-500 animate-pulse")} />
+                                Voice Channel
                             </div>
                             {activeVoiceCount > 0 ? (
-                                <span className="text-xs font-bold text-emerald-400">{activeVoiceCount} Active</span>
+                                <span className="text-[10px] font-bold text-emerald-500">{activeVoiceCount} Active</span>
                             ) : (
-                                <span className="text-xs font-bold text-slate-600">0 Active</span>
+                                <span className="text-[10px] font-bold text-zinc-700">Empty</span>
                             )}
                         </div>
                         {currentUser && (
@@ -355,9 +453,9 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                 </aside>
 
                 {/* Center: Canvas Area */}
-                <section className="flex-1 bg-slate-800/20 relative flex flex-col overflow-hidden min-h-[350px]">
-                    <div className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-hidden">
-                        <div className="w-full h-full max-w-4xl bg-white rounded-lg shadow-2xl relative overflow-hidden flex items-center justify-center touch-none">
+                <section className="flex-1 bg-zinc-950/50 relative flex flex-col overflow-hidden min-h-[350px]">
+                    <div className="flex-1 flex items-center justify-center p-2 md:p-6 overflow-hidden">
+                        <div className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl relative overflow-hidden flex items-center justify-center touch-none ring-1 ring-zinc-800">
                             <CanvasBoard
                                 isDrawer={isDrawer}
                                 color={color}
@@ -369,25 +467,30 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                                 {status === 'CHOOSING_WORD' && (
                                     <motion.div
                                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                        className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center z-10 p-4 text-center"
+                                        className="absolute inset-0 bg-zinc-950/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-6 text-center"
                                     >
-                                        <h2 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent animate-pulse mb-6">
-                                            {isDrawer ? 'Choose a word!' : `${players.find(p => p.id === currentDrawer)?.username || 'Drawer'} is choosing...`}
+                                        <h2 className="text-xl md:text-3xl font-black text-white mb-2 animate-pulse">
+                                            {isDrawer ? 'CHOOSE A WORD' : 'DRAWER IS CHOOSING'}
                                         </h2>
+                                        <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest mb-8">
+                                            {isDrawer ? 'Select a word to draw' : `${players.find(p => p.id === currentDrawer)?.username} is thinking...`}
+                                        </p>
 
                                         {isDrawer && availableWords.length > 0 && (
-                                            <div className="flex flex-wrap gap-3 justify-center">
+                                            <div className="flex flex-wrap gap-4 justify-center max-w-lg">
                                                 {availableWords.map((w) => (
-                                                    <button
+                                                    <motion.button
                                                         key={w}
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
                                                         onClick={() => {
                                                             handleWordSelection(w);
                                                             setWord(w);
                                                         }}
-                                                        className="px-4 py-2 md:px-6 md:py-3 bg-slate-800 border border-slate-700 hover:border-purple-500 rounded-xl font-bold text-lg md:text-xl text-slate-200 shadow-lg active:scale-95 transition-all"
+                                                        className="px-6 py-4 bg-zinc-900 border border-zinc-800 hover:border-purple-500 hover:bg-zinc-800 rounded-2xl font-bold text-lg text-zinc-100 shadow-xl transition-all cursor-pointer"
                                                     >
                                                         {w}
-                                                    </button>
+                                                    </motion.button>
                                                 ))}
                                             </div>
                                         )}
@@ -397,85 +500,123 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                         </div>
                     </div>
 
-                    {/* Toolbar (Only for drawer) - Scrollable on mobile */}
+                    {/* Toolbar (Only for drawer) */}
                     {isDrawer && (
-                        <div className="h-16 md:h-20 bg-slate-900 border-t border-slate-800 flex items-center justify-center animate-slide-up shrink-0 overflow-x-auto px-4">
-                            <div className="flex gap-2 bg-slate-800 p-1.5 md:p-2 rounded-lg items-center shadow-lg border border-slate-700 md:w-auto w-max">
-                                <ColorBtn color="#000000" selected={color === '#000000'} onClick={() => setColor('#000000')} />
-                                <ColorBtn color="#ef4444" selected={color === '#ef4444'} onClick={() => setColor('#ef4444')} />
-                                <ColorBtn color="#3b82f6" selected={color === '#3b82f6'} onClick={() => setColor('#3b82f6')} />
-                                <ColorBtn color="#22c55e" selected={color === '#22c55e'} onClick={() => setColor('#22c55e')} />
-                                <ColorBtn color="#eab308" selected={color === '#eab308'} onClick={() => setColor('#eab308')} />
+                        <div className="h-20 bg-zinc-900 border-t border-zinc-900 flex items-center justify-center animate-slide-up shrink-0 overflow-x-auto px-4 z-20">
+                            <div className="flex gap-4 p-2 rounded-2xl items-center">
+                                {/* Colors */}
+                                <div className="flex gap-2 bg-black/50 p-2 rounded-xl border border-zinc-800">
+                                    <ColorBtn color="#000000" selected={color === '#000000'} onClick={() => setColor('#000000')} />
+                                    <ColorBtn color="#ef4444" selected={color === '#ef4444'} onClick={() => setColor('#ef4444')} />
+                                    <ColorBtn color="#3b82f6" selected={color === '#3b82f6'} onClick={() => setColor('#3b82f6')} />
+                                    <ColorBtn color="#22c55e" selected={color === '#22c55e'} onClick={() => setColor('#22c55e')} />
+                                    <ColorBtn color="#eab308" selected={color === '#eab308'} onClick={() => setColor('#eab308')} />
+                                </div>
 
-                                <div className="w-px h-6 md:h-8 bg-slate-700 mx-1 md:mx-2"></div>
+                                <div className="w-px h-8 bg-zinc-800"></div>
 
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-slate-500" style={{ transform: `scale(${brushSize / 5})` }}></div>
+                                {/* Brush Size */}
+                                <div className="flex items-center gap-3 bg-black/50 p-2 rounded-xl border border-zinc-800 px-4">
+                                    <div className="w-2 h-2 rounded-full bg-zinc-400" style={{ transform: `scale(${brushSize / 5})` }}></div>
                                     <input
                                         type="range"
                                         min="2" max="20"
                                         value={brushSize}
                                         onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                                        className="w-16 md:w-24 accent-purple-500 cursor-pointer"
+                                        className="w-24 accent-purple-500 cursor-pointer h-1.5 bg-zinc-700 rounded-lg appearance-none"
                                     />
                                 </div>
 
-                                <div className="w-px h-6 md:h-8 bg-slate-700 mx-1 md:mx-2"></div>
+                                <div className="w-px h-8 bg-zinc-800"></div>
 
-                                <button onClick={() => setColor('#ffffff')} className={clsx("p-2 rounded md:p-3", color === '#ffffff' ? "bg-slate-700 text-white" : "text-slate-400")}><Eraser className="w-4 h-4 md:w-5 md:h-5" /></button>
-                                <button onClick={handleClearCanvas} className="p-2 text-red-400 md:p-3"><Trash2 className="w-4 h-4 md:w-5 md:h-5" /></button>
+                                {/* Tools */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setColor('#ffffff')}
+                                        className={clsx(
+                                            "p-3 rounded-xl border transition-all cursor-pointer",
+                                            color === '#ffffff' ? "bg-zinc-800 text-white border-zinc-600" : "bg-black/50 text-zinc-500 border-zinc-800 hover:text-white"
+                                        )}
+                                        title="Eraser"
+                                    >
+                                        <Eraser className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={handleClearCanvas}
+                                        className="p-3 bg-red-950/20 text-red-500 border border-red-900/30 rounded-xl hover:bg-red-900/30 transition-all cursor-pointer"
+                                        title="Clear Canvas"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
                 </section>
 
-                {/* Right: Chat - Fixed height on mobile */}
-                <aside className="h-[35vh] md:h-auto md:w-80 bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col z-10 shrink-0">
-                    <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 md:space-y-3">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={clsx("text-sm transition-colors",
-                                msg.isSystem ? "text-green-400 font-bold" : "text-red-400"
-                            )}>
-                                {!msg.isSystem && <span className="font-bold text-slate-500">{msg.username}: </span>}
-                                <span className={clsx(msg.isSystem && "italic")}>{msg.text}</span>
-                            </div>
+                {/* Right: Chat */}
+                <aside className="h-[35vh] md:h-auto md:w-80 bg-zinc-950/80 backdrop-blur-md border-t md:border-t-0 md:border-l border-zinc-900 flex flex-col z-20 shrink-0">
+                    <div className="p-3 border-b border-zinc-900 bg-zinc-900/30">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Live Chat</h3>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        {messages.map((msg, i) => (
+                            <motion.div
+                                initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                                key={i}
+                                className={clsx(
+                                    "text-sm p-3 rounded-xl border",
+                                    msg.isSystem
+                                        ? "bg-emerald-950/10 border-emerald-500/10 text-emerald-400 text-center text-xs font-bold uppercase tracking-wide"
+                                        : "bg-zinc-900/50 border-zinc-800 text-zinc-300"
+                                )}
+                            >
+                                {!msg.isSystem && <div className="font-bold text-xs text-zinc-500 mb-1 block">{msg.username}</div>}
+                                <span className={clsx(msg.isSystem && "")}>{msg.text}</span>
+                            </motion.div>
                         ))}
                         <div ref={chatEndRef} />
                     </div>
-                    <form onSubmit={handleSendMessage} className="p-3 md:p-4 bg-slate-950 border-t border-slate-800 flex gap-2 shrink-0 safe-area-bottom">
+
+                    <form onSubmit={handleSendMessage} className="p-4 bg-zinc-900/50 border-t border-zinc-900 flex gap-2 shrink-0 safe-area-bottom">
                         {/* Mobile/Quick Mute Toggle */}
                         <button
                             type="button"
                             onClick={() => setIsMicMuted(!isMicMuted)}
                             className={clsx(
-                                "p-2 rounded-lg transition-colors border",
+                                "p-3 rounded-xl transition-colors border cursor-pointer",
                                 isMicMuted
-                                    ? "bg-red-500/10 border-red-500/50 text-red-500"
-                                    : "bg-slate-800 border-slate-700 text-green-400 hover:bg-slate-700"
+                                    ? "bg-red-500/10 border-red-500/20 text-red-500"
+                                    : "bg-zinc-800 border-zinc-700 text-emerald-500 hover:bg-zinc-700"
                             )}
                         >
                             {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                         </button>
 
-                        <input
-                            type="text"
-                            value={guessInput}
-                            onChange={(e) => setGuessInput(e.target.value)}
-                            disabled={isDrawer || hasGuessed}
-                            placeholder={isDrawer ? "Drawing..." : "Type guess..."}
-                            className={clsx(
-                                "flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors",
-                                (isDrawer || hasGuessed) && "opacity-50 cursor-not-allowed"
-                            )}
-                        />
-                        <button type="submit" className="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-purple-400 transition-colors">
-                            <Send className="w-4 h-4" />
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                value={guessInput}
+                                onChange={(e) => setGuessInput(e.target.value)}
+                                disabled={isDrawer || hasGuessed}
+                                placeholder={isDrawer ? "It's your turn to draw!" : "Type your guess here..."}
+                                className={clsx(
+                                    "w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-colors text-white placeholder:text-zinc-600",
+                                    (isDrawer || hasGuessed) && "opacity-50 cursor-not-allowed"
+                                )}
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={!guessInput.trim() || isDrawer || hasGuessed}
+                            className="p-3 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <Send className="w-5 h-5" />
                         </button>
                     </form>
                 </aside>
             </main>
-
-
 
             {/* Overlays (Scoreboard etc) */}
             <AnimatePresence>
@@ -492,31 +633,80 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
                 )}
             </AnimatePresence>
 
-
         </div >
     );
 }
 
-function PlayerCard({ player, rank, isDrawer, isSpeaking, isMuted }: { player: Player, rank: number, isDrawer: boolean, isSpeaking?: boolean, isMuted?: boolean }) {
+function PlayerCard({
+    player,
+    rank,
+    isDrawer,
+    isSpeaking,
+    isMuted,
+    team,
+    isSpectator
+}: any) {
+    const isTeamA = team === 'A';
+    const isTeamB = team === 'B';
+
+    // Refined card styles for Midnight Theme
     return (
         <div className={clsx(
-            "p-3 rounded-xl flex items-center gap-3 transition-all duration-200 border",
-            isSpeaking ? "shadow-[0_0_15px_rgba(52,211,153,0.3)] border-emerald-500/50 bg-slate-800" :
-                isDrawer ? "bg-purple-900/20 border-purple-500/30" :
-                    "bg-slate-800/50 border-transparent"
+            "p-3 rounded-xl flex items-center gap-3 transition-all duration-300 border relative group",
+            // Drawer Highlight
+            isDrawer && "bg-purple-900/10 border-purple-500/30 shadow-[0_0_15px_-5px_rgba(168,85,247,0.2)]",
+
+            // Speaking Highlight
+            isSpeaking && !isMuted && "bg-emerald-900/10 border-emerald-500/30",
+
+            // Team A
+            isTeamA && !isDrawer && "bg-cyan-950/10 border-cyan-500/10 hover:border-cyan-500/30",
+
+            // Team B
+            isTeamB && !isDrawer && "bg-rose-950/10 border-rose-500/10 hover:border-rose-500/30",
+
+            // Spectator
+            isSpectator && "bg-transparent border-zinc-800/50 opacity-60 hover:opacity-100",
+
+            // Default
+            !isDrawer && !isTeamA && !isTeamB && !isSpectator && !isSpeaking && "bg-zinc-900/30 border-zinc-800 hover:bg-zinc-900/50"
         )}>
-            <div className="font-mono text-slate-500 text-xs w-4">#{rank}</div>
+            {/* Rank / Status Indicator */}
+            <div className={clsx(
+                "w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold border",
+                isDrawer ? "bg-purple-500 text-white border-purple-400" :
+                    isTeamA ? "bg-cyan-950 text-cyan-400 border-cyan-900" :
+                        isTeamB ? "bg-rose-950 text-rose-400 border-rose-900" :
+                            "bg-zinc-900 text-zinc-500 border-zinc-800"
+            )}>
+                {isSpectator ? "👁️" : `#${rank}`}
+            </div>
+
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <div className={clsx("font-bold text-sm truncate", isDrawer ? "text-purple-400" : "text-slate-300")}>
+                    <div className={clsx(
+                        "font-bold text-sm truncate transition-colors",
+                        isDrawer ? "text-purple-300" :
+                            isTeamA ? "text-cyan-200" :
+                                isTeamB ? "text-rose-200" :
+                                    "text-zinc-300"
+                    )}>
                         {player.username}
                     </div>
-                    {isMuted && <MicOff className="w-3 h-3 text-red-400 shrink-0" />}
                 </div>
-                <div className="text-xs text-slate-500">Score: {player.score}</div>
+                {!isSpectator && (
+                    <div className="text-[10px] uppercase tracking-wider font-bold text-zinc-600 group-hover:text-zinc-500 transition-colors">
+                        {player.score} PTS
+                    </div>
+                )}
             </div>
-            {isDrawer && <Pencil className="w-3 h-3 text-purple-400 animate-bounce" />}
-            {isSpeaking && !isMuted && <Volume2 className="w-3 h-3 text-emerald-400 animate-pulse" />}
+
+            {/* Status Icons */}
+            <div className="flex items-center gap-2">
+                {isMuted && <MicOff className="w-3.5 h-3.5 text-red-500 opacity-50" />}
+                {isSpeaking && !isMuted && <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />}
+                {isDrawer && <Pencil className="w-3.5 h-3.5 text-purple-400" />}
+            </div>
         </div>
     );
 }

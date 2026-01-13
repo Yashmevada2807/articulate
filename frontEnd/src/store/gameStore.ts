@@ -10,6 +10,14 @@ export interface Player {
     socketId: string;
     isInVoice?: boolean;
     isMuted?: boolean;
+    team?: 'A' | 'B' | null;
+    role?: 'player' | 'spectator';
+}
+
+export interface TeamModeConfig {
+    enabled: boolean;
+    selectionMode: 'manual' | 'random';
+    teamsLocked: boolean;
 }
 
 interface GameState {
@@ -17,6 +25,7 @@ interface GameState {
     players: Player[];
     currentUser: Player | null;
     status: GameStatus;
+    teamMode: TeamModeConfig;
     socket: any; // We'll type this loosely here or import the client type if shared
 
     setRoomId: (id: string) => void;
@@ -26,6 +35,7 @@ interface GameState {
     currentRound: number;
     totalRounds: number;
     setGameStatus: (status: GameStatus) => void;
+    setTeamMode: (config: TeamModeConfig) => void;
     setSocket: (socket: any) => void;
     syncGameState: (state: any) => void;
     reset: () => void;
@@ -36,6 +46,11 @@ export const useGameStore = create<GameState>((set) => ({
     players: [],
     currentUser: null,
     status: 'LOBBY',
+    teamMode: {
+        enabled: false,
+        selectionMode: 'manual',
+        teamsLocked: false
+    },
     socket: null,
     currentRound: 1,
     totalRounds: 3,
@@ -47,10 +62,12 @@ export const useGameStore = create<GameState>((set) => ({
     })),
     setCurrentUser: (currentUser) => set({ currentUser }),
     setGameStatus: (status) => set({ status }),
+    setTeamMode: (teamMode) => set({ teamMode }),
     setSocket: (socket) => set({ socket }),
     syncGameState: (state) => set((prev) => ({
         ...prev,
         status: state.status,
+        teamMode: state.teamMode || prev.teamMode,
         currentRound: state.round || state.currentRound || 1,
         // Sync other state if available
     })),
@@ -59,6 +76,11 @@ export const useGameStore = create<GameState>((set) => ({
         players: [],
         currentUser: null,
         status: 'LOBBY',
+        teamMode: {
+            enabled: false,
+            selectionMode: 'manual',
+            teamsLocked: false
+        },
         socket: null,
         currentRound: 1,
         totalRounds: 3
